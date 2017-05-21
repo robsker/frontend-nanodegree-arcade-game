@@ -136,6 +136,14 @@ var Engine = (function(global) {
             }
         }
 
+        allEnemies = allEnemies.filter(function(enemy) {
+            return !enemy.isVisible();
+        });
+
+        if (allEnemies.length < numEnemies) {
+            allEnemies.push(new Enemy(1));
+        }
+
         renderEntities();
     }
 
@@ -149,6 +157,10 @@ var Engine = (function(global) {
          */
         allEnemies.forEach(function(enemy) {
             enemy.render();
+        });
+
+        safePlayers.forEach(function(safePlayer) {
+            safePlayer.render();
         });
 
         player.render();
