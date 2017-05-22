@@ -1,0 +1,54 @@
+First night:
+
+- Figuring out how things work, where the comments are indicating what I should fill in.
+- Noticed there's not much interesting in resources.js. Just figure out how it works, but doesn't appear to be anything to do.
+- Trying to figure out how engine.js works.
+	- Note the update() and render calls().
+	- How does the loop work? What is actually looping?
+		- Notice the requestAnimationFrame() call, pointing it back to main.
+- Saw a couple markers in app.js to fill in some stuff.
+	- No notes as to how to really update coordinates.
+	- Made the array and made a Player class, just like the Enemy class (with its own different sprite).
+	- Finally figured, maybe I should create an this.x field, keep incrementing it, and see if engine will start moving it.
+		- It did.
+
+Notes for second night:
+- Now that you know how to move something from left to right, figure out the exact spacing, so that you are moving enemies from left to right exactly inside the row.
+- Get spacing correct (y coord), so you can create enemies in any given row.
+	- Make row an argument in constructor, and set a fixed y coord accordingly for the enemy.
+- Make an isVisible() method. If false, pop it from the array and push a new enemy into the array with 0 x coord and same row arg.
+- Make a Level field, indicating the difficulty.
+	- Maybe level 1 only has 3 enemies total for all possible rows / cols. Use random number to figure out which column they appear in. Each level must have to have at least one enemy per row.
+	- Paint the screen with the enemies positioned in negative coordinates (off the screen), with the right-most one at zero (or whatever it turns out to be just to the left of the screen).
+- Get enemies working first, then start with Player class.
+	- Only thing interesting is that Player class should have a move() method that updates x and y in distinct jumps.
+	- Should allow you to specify which row and column as args, and it will do x, y spacing.
+
+
+Second morning:
+Image Notes
+	- Opened in Pixelmator and used a horizontal guide to analyze the image.
+	- Stone image:
+		- 171px height
+		- transparency starts at 0 (top)
+		- stone starts
+		- 48px stone starts
+		- ~130px dark stone start
+			- Accounts for the 83px placement per row in engine.js. Just a little dark at bottom of each row.
+		- 171px darkness ends.
+
+Third day FINALLY:
+- Re-acquainted self after a long time away (8 weeks??)
+- Decided to implement a numEnemies variable and an Enemy.isVisible() method. As part of render(), it will filter non-visible members from the allEnemies array, and it will add a new enemy to the array if the count is less than numEnemies.
+	- Now I have looping over a single row.
+- Added col and row to Player.
+	- Implemented the keystroke logic in handleInput().
+	- Implemented update(), which updates x and y when a keystroke is hit.
+	- Just eyeballed and played with the number of pixels to increment for row shifting.
+	- Now I have player movement (albeit my first iteration has player starting at top -- row 0 -- so I will fix that next).
+
+Morning:
+- Altered Player.row default val to simply make the player start at bottom.
+
+Final Sunday:
+Basically everything else, including levels, printing game header info, collisions, resetting, extra points, fully OOP approach, etc.

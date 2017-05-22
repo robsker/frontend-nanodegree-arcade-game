@@ -1,104 +1,7 @@
-// Enemies our player must avoid
-var Enemy = function(rowNum) {
-    // Variables applied to each of our instances go here,
-    // we've provided one for you to get started
-    this.x = -101;
-    this.y = rowNum * 145; // just eyeballing ... 62, 145
-    this.speed = 50;
-
-    // The image/sprite for our enemies, this uses
-    // a helper we've provided to easily load images
-    this.sprite = 'images/enemy-bug.png';
-};
-
-// Update the enemy's position, required method for game
-// Parameter: dt, a time delta between ticks
-Enemy.prototype.update = function(dt) {
-    // You should multiply any movement by the dt parameter
-    // which will ensure the game runs at the same speed for
-    // all computers.
-    this.x = this.x+(this.speed*dt);
-};
-
-// Draw the enemy on the screen, required method for game
-Enemy.prototype.render = function() {
-    ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
-};
-
-Enemy.prototype.isVisible = function() {
-    return this.x > 505;
-};
-
-// Now write your own player class
-// This class requires an update(), render() and
-// a handleInput() method.
-var Player = function() {
-    this.row = 5;
-    this.col = 0;
-    this.x = 0;
-    this.y = 0; // just eyeballing ... 62, 145
-
-    // The image/sprite for our enemies, this uses
-    // a helper we've provided to easily load images
-    this.sprite = 'images/char-boy.png';
-};
-
-Player.prototype.update = function(dt) {
-    this.x = this.col * 100;
-    this.y = (this.row * 80) - 20; // just eyeballing ... 62, 145
-};
-
-// Draw the enemy on the screen, required method for game
-Player.prototype.render = function() {
-    ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
-};
-
-Player.prototype.handleInput = function(keypress) {
-    var desiredCol = this.col;
-    var desiredRow = this.row;
-
-    if (keypress === 'left') {
-        desiredCol--;
-    } else if (keypress === 'right') {
-        desiredCol++;
-    } else if (keypress === 'up') {
-        desiredRow--;
-    } else if (keypress === 'down') {
-        desiredRow++;
-    }
-
-    this.move(desiredRow, desiredCol);
-};
-
-Player.prototype.move = function(row, col) {
-    if (col < 0) col = 0;
-    if (col > 4) col = 4;
-    if (row < 0) row = 0;
-    if (row > 5) row = 5;
-
-    if (isSpaceFree(row, col)) {
-        this.row = row;
-        this.col = col;
-    }
-
-    this.update();
-
-    if (this.row === 0) {
-        playerSafe(this);
-    }
-};
-
-// Return true if there is a Player who is already safe at the specified column.
-Player.prototype.isSafeAt = function(col) {
-    return this.row === 0 && this.col === col;
-};
-
 // Now instantiate your objects.
 // Place all enemy objects in an array called allEnemies
 // Place the player object in a variable called player
 var allEnemies = new Array();
-var numEnemies = 1;
-allEnemies.push(new Enemy(numEnemies));
 
 // The active player
 var player = new Player();
@@ -106,22 +9,122 @@ var player = new Player();
 // Players that have made it to the top safely
 var safePlayers = new Array();
 
+// Arrays for some board objects.
+var allRocks = new Array();
+var allGems = new Array();
+var allKeys = new Array();
+
+// Game progress information.
+var score = 0;
+var livesRemaining = 3;
+var level = 1;
+
+// How fast the enemies can move. This is variable per level.
+var minEnemySpeed = 50;
+var maxEnemySpeed = 120;
+
+// Returns true if moving to the space is allowed.
 function isSpaceFree(row, col) {
     var isFree = true;
-    if (row === 0) {
-        safePlayers.forEach(function(safePlayer) {
-            if (safePlayer.isSafeAt(col)) {
-                isFree = false;
-            }
-        });
+
+    // Can't move where rocks are.
+    isFree = !gridObjectAt(safePlayers, row, col);
+    if (isFree) isFree = !gridObjectAt(allRocks, row, col);
+
+    // Eats the Gem and scores points.
+    if (isFree && gridObjectAt(allGems, row, col)) {
+      score += allGems.pop().pointsFor();
+    }
+
+    // Eats the Key and scores points.
+    if (isFree && gridObjectAt(allKeys, row, col)) {
+      score += allKeys.pop().pointsFor();
     }
 
     return isFree;
 };
 
-function playerSafe(safePlayer) {
-    safePlayers.push(safePlayer);
+// Generic function for determining if a GridObject instance lives at the row and column.
+function gridObjectAt(objs, row, col) {
+  var occupied = false;
+
+  objs.forEach(function(obj) {
+    if (!occupied) {
+      occupied = obj.isAt(row, col);
+    }
+  });
+
+  return occupied;
+}
+
+// Evaluates whether our Player made it to the top.
+// If so, will score points and track the player in safePlayers array.
+function evalSafePlayer() {
+  if (player.isSafe()) {
+    safePlayers.push(player);
     player = new Player();
+    score += 100;
+  }
+}
+
+// Are we done with the level?? Returns true, if so.
+function allPlayersSafe() {
+  return safePlayers.length > 4;
+}
+
+// Detects a collision between our enemy and player.
+function detectEnemyCollision() {
+  var collided = allEnemies.filter(function(enemy) {
+    if (enemy.row !== player.row) return false;
+
+    // Just eyeballing the pixels. Assuming our character occupies 40px of the 100 total.
+    var playerLeft = player.x + 30;
+    var playerRight = player.x + 70;
+    var enemyLeft = enemy.x;
+    var enemyRight = enemy.x + 100;
+
+    // This is the collision logic.
+    return enemyRight > playerLeft && enemyLeft < playerRight;
+  });
+
+  if (collided.length > 0) {
+    player = new Player();
+    livesRemaining--;
+  }
+}
+
+// Function attempts to keep at least n (level) enemies on the board at all times.
+// More enemies per level.
+function evalEnemies() {
+  var visibleEnemies = allEnemies.filter(function(enemy) {
+      return !enemy.scrolledOff();
+  });
+
+  // Reset our allEnemies array to be the enemies that have not yet scrolled off.
+  allEnemies = visibleEnemies.slice(0);
+
+  // One extra temp filter that will make sure we start creating new
+  // enemies when they're ABOUT to scroll off.
+  // Just helps make sure there's a constant flow.
+  visibleEnemies = visibleEnemies.filter(function(enemy) {
+    return !enemy.aboutToScrollOff();
+  });
+
+  for (var i = 0; i < (level - visibleEnemies.length); i++) {
+    createNewEnemy();
+  }
+}
+
+// Create a new enemy and track it in our array.
+function createNewEnemy() {
+  var row = random(1, 5);
+  if (row > 4) row = 4;
+  allEnemies.push(new Enemy(row, random(minEnemySpeed, maxEnemySpeed)));
+}
+
+// Function to return a random value from the given range.
+function random(min, max) {
+  return Math.floor(Math.random() * (max - min)) + min;
 }
 
 // This listens for key presses and sends the keys to your

@@ -80,7 +80,6 @@ var Engine = (function(global) {
      */
     function update(dt) {
         updateEntities(dt);
-        // checkCollisions();
     }
 
     /* This is called by the update function and loops through all of the
@@ -91,10 +90,24 @@ var Engine = (function(global) {
      * render methods.
      */
     function updateEntities(dt) {
-        allEnemies.forEach(function(enemy) {
-            enemy.update(dt);
+        // Update all our entities.
+        updateEntity(allEnemies, dt);
+        updateEntity(safePlayers, dt);
+        updateEntity(allRocks, dt);
+        updateEntity(allGems, dt);
+        updateEntity(allKeys, dt);
+        updateEntity(player, dt);
+    }
+
+    // Generic function that can update entities individually or as arrays.
+    function updateEntity(obj, dt) {
+      if (Array.isArray(obj)) {
+        obj.forEach(function(o) {
+          o.update(dt);
         });
-        player.update();
+      } else {
+        obj.update(dt);
+      }
     }
 
     /* This function initially draws the "game level", it will then call
@@ -136,14 +149,23 @@ var Engine = (function(global) {
             }
         }
 
-        allEnemies = allEnemies.filter(function(enemy) {
-            return !enemy.isVisible();
-        });
+        // Call our functions in app.js that determine game logic progression.
+        evalEnemies();
+        evalSafePlayer();
+        detectEnemyCollision();
 
-        if (allEnemies.length < numEnemies) {
-            allEnemies.push(new Enemy(1));
+        if (allPlayersSafe()) {
+          score+=500;
+          level++;
+          reset();
         }
 
+        if (livesRemaining < 0) {
+          allEnemies = new Array();
+          player = null;
+        }
+
+        updateGameInfo();
         renderEntities();
     }
 
@@ -155,23 +177,70 @@ var Engine = (function(global) {
         /* Loop through all of the objects within the allEnemies array and call
          * the render function you have defined.
          */
-        allEnemies.forEach(function(enemy) {
-            enemy.render();
-        });
-
-        safePlayers.forEach(function(safePlayer) {
-            safePlayer.render();
-        });
-
-        player.render();
+        renderEntity(allEnemies);
+        renderEntity(safePlayers);
+        renderEntity(allRocks);
+        renderEntity(allGems);
+        renderEntity(allKeys);
+        renderEntity(player);
     }
 
-    /* This function does nothing but it could have been a good place to
-     * handle game reset states - maybe a new game menu or a game over screen
-     * those sorts of things. It's only called once by the init() method.
-     */
+    // Generic function that can render entities individually or as arrays.
+    function renderEntity(obj) {
+      if (!obj) return;
+
+      if (Array.isArray(obj)) {
+        obj.forEach(function(o) {
+          o.render();
+        });
+      } else {
+        obj.render();
+      }
+    }
+
+    // Resets the board, either on the first run, or in between levels.
     function reset() {
-        // noop
+      maxEnemySpeed += 20;
+
+      if (allEnemies.length > 0) allEnemies = new Array();
+      if (safePlayers.length > 0) safePlayers = new Array();
+      if (allGems.length > 0) allGems = new Array();
+      if (allKeys.length > 0) allKeys = new Array();
+      if (allRocks.length > 0) allRocks = new Array();
+      player = new Player();
+
+      if (level > 3) {
+        allKeys.push(new Key());
+
+        for (var i = 3; i < level; i++) {
+          allRocks.push(new Rock());
+        }
+      }
+
+      if (random(1, 3) >= 2) {
+        allGems.push(new Gem());
+      }
+    }
+
+    // Draws the header game info.
+    function updateGameInfo() {
+      ctx.font="20px Georgia";
+
+      // To avoid artifacts, we will clear the area with white during each rendering.
+      ctx.fillStyle="#ffffff";
+      ctx.fillRect(0, 0, 500, 50);
+
+      // Font is black and draw the information.
+      ctx.fillStyle="#000000";
+      ctx.fillText("Score: " + score, 0, 30);
+
+      if (livesRemaining >= 0) {
+        ctx.fillText("Lives: " + livesRemaining, 200, 30);
+      } else {
+        ctx.fillText("Game Over", 200, 30);
+      }
+
+      ctx.fillText("Level " + level, 400, 30);
     }
 
     /* Go ahead and load all of the images we know we're going to need to
@@ -179,11 +248,23 @@ var Engine = (function(global) {
      * all of these images are properly loaded our game will start.
      */
     Resources.load([
-        'images/stone-block.png',
-        'images/water-block.png',
-        'images/grass-block.png',
-        'images/enemy-bug.png',
-        'images/char-boy.png'
+      'images/char-boy.png',
+      'images/char-cat-girl.png',
+      'images/char-horn-girl.png',
+      'images/char-pink-girl.png',
+      'images/char-princess-girl.png',
+      'images/enemy-bug.png',
+      'images/Gem Blue.png',
+      'images/Gem Green.png',
+      'images/Gem Orange.png',
+      'images/grass-block.png',
+      'images/Heart.png',
+      'images/Key.png',
+      'images/Rock.png',
+      'images/Selector.png',
+      'images/Star.png',
+      'images/stone-block.png',
+      'images/water-block.png'
     ]);
     Resources.onReady(init);
 
